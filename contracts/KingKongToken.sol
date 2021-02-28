@@ -8,8 +8,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 // KingKongToken with Governance.
 contract KingKongToken is ERC20("KingKongToken", "KKT"), Ownable {
+
+    uint256 public constant TOTAL_SUPPLY_LIMIT = 100000000 * (10**18);
+
     /// @dev Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
     function mint(address _to, uint256 _amount) public onlyOwner {
+        uint256 nowTotalSupply = totalSupply();
+        uint256 afterTotalSupply = nowTotalSupply.add(_amount);
+        require(afterTotalSupply <= TOTAL_SUPPLY_LIMIT, "KKT::mint: totalSupply limit");
+
         _mint(_to, _amount);
         _moveDelegates(address(0), _delegates[_to], _amount);
     }

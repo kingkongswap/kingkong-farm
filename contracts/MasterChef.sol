@@ -46,12 +46,8 @@ contract MasterChef is Ownable {
     KingKongToken public kkt;
     // Dev address.
     address public devaddr;
-    // Block number when bonus KKT period ends.
-    uint256 public bonusEndBlock;
     // KKT tokens created per block.
     uint256 public kktPerBlock;
-    // Bonus muliplier for early kkt makers.
-    uint256 public BONUS_MULTIPLIER = 10;
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
@@ -72,13 +68,11 @@ contract MasterChef is Ownable {
         KingKongToken _kkt,
         address _devaddr,
         uint256 _kktPerBlock,
-        uint256 _startBlock,
-        uint256 _bonusEndBlock
+        uint256 _startBlock
     ) public {
         kkt = _kkt;
         devaddr = _devaddr;
         kktPerBlock = _kktPerBlock;
-        bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
     }
 
@@ -124,26 +118,13 @@ contract MasterChef is Ownable {
         poolInfo[_pid].allocPoint = _allocPoint;
     }
 
-    function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
-        BONUS_MULTIPLIER = multiplierNumber;
+    function setKKTPerBlock(uint256 _kktPerBlock) public onlyOwner {
+        kktPerBlock = _kktPerBlock;
     }
 
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to)
-        public
-        view
-        returns (uint256)
-    {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
-        } else {
-            return
-                bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                    _to.sub(bonusEndBlock)
-                );
-        }
+    function getMultiplier(uint256 _from, uint256 _to) public pure returns (uint256) {
+        return _to.sub(_from);
     }
 
     // View function to see pending KKTs on frontend.

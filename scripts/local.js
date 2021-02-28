@@ -2,25 +2,30 @@ const hre = require('hardhat')
 const fs = require('fs')
 const { BigNumber } = require('ethers')
 
-var accounts = null
 
 async function main() {
-    accounts = await hre.ethers.getSigners()
+    const accounts = await hre.ethers.getSigners()
+    const devAddress = accounts[1].address
 
-    let factoryAbi = getAbi('./artifacts/contracts/LossFactory.sol/LossFactory.json')
-    let factoryAddress = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9'
-    const factory = new ethers.Contract(factoryAddress, factoryAbi, accounts[0])
+    let KKTabi = getAbi('./artifacts/contracts/KingKongToken.sol/KingKongToken.json')
+    let kktAAddress = '0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6'
+    const kkt = new ethers.Contract(kktAAddress, KKTabi, accounts[1])
 
-    let allPairsLength = await factory.allPairsLength()
-    console.log('allPairsLength:', allPairsLength.toNumber())
-    
-	let pairAddress = await factory.allPairs(allPairsLength.toNumber() - 1)
-    console.log('pairAddress:', pairAddress)
+    let chefabi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
+    let chefAAddress = '0x610178dA211FEF7D417bC0e6FeD39F05609AD788'
+    const chef = new ethers.Contract(chefAAddress, chefabi, accounts[0])
 
-	let pairAbi = getAbi('./artifacts/contracts/LossPair.sol/LossPair.json')
-    const pair = new ethers.Contract(pairAddress, pairAbi, accounts[0])
-	let reserves = await pair.getReserves()
-    console.log('reserves:', reserves[0].toNumber(), reserves[1].toNumber(), reserves[2])
+    let lpTokenAddress = '0xb3398d0341b390324e80286583ec34c7b5a272cf'
+    // await chef.add(m(1), lpTokenAddress, true)
+
+    let poolLength = await chef.poolLength()
+    console.log('poolLength:', poolLength.toNumber())
+    if (poolLength == 0) {
+        return
+    }
+
+    let pool = await chef.poolInfo(poolLength - 1)
+    console.log('pool:', pool.lpToken, d(pool.allocPoint), d(pool.accKKTPerShare), d(pool.lastRewardBlock))
 
     console.log('done')
 }
@@ -33,9 +38,18 @@ function getAbi(jsonPath) {
 }
 
 
+function m(num) {
+    return BigNumber.from('1000000000000000000').mul(num)
+}
+
+function d(bn) {
+    return bn.div('1000000000').toNumber() / 1000000000
+}
+
+
 main()
-.then(() => process.exit(0))
-.catch(error => {
-    console.error(error)
-    process.exit(1)
+    .then(() => process.exit(0))
+    .catch(error => {
+        console.error(error)
+        process.exit(1)
     })

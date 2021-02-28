@@ -2,27 +2,80 @@ const hre = require('hardhat')
 const fs = require('fs')
 const { BigNumber } = require('ethers')
 
-var accounts = null
+const kktAAddress = '0xAc8cD27c2e74DfCCD8B01aeEF84aC47d1629C6b0'
+const chefAAddress = '0x60c186Fc32f29906655Df54f2bB5E0f11C04a3c9'
 
 async function main() {
-    accounts = await hre.ethers.getSigners()
+    const accounts = await hre.ethers.getSigners()
+    const devAddress = accounts[1].address
+
+    let KKTabi = getAbi('./artifacts/contracts/KingKongToken.sol/KingKongToken.json')
+    const kkt = new ethers.Contract(kktAAddress, KKTabi, accounts[1])
+
+    let chefabi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
+    const chef = new ethers.Contract(chefAAddress, chefabi, accounts[0])
+
+    console.log('MasterChef owner is:', await chef.owner())  //okex会报错
+	console.log('MasterChef dev is:', await chef.devaddr())  //okex会报错
+
+    //一种token对应一个池子，不能重复开池子，否则会混乱
+    let lpTokenAddress = kktAAddress
+    await chef.add(m(1), lpTokenAddress, true)
+    console.log('add pool')
+
+    let poolLength = await chef.poolLength()
+    console.log('poolLength:', poolLength.toNumber())
+    if (poolLength == 0) {
+        return
+    }
+    let pid = 0
+
+    let pool = await chef.poolInfo(pid)
+    console.log('pool:', pool.lpToken, d(pool.allocPoint), d(pool.accKKTPerShare), d(pool.lastRewardBlock))
+
+    //投入池子
+    await kkt.approve(chefAAddress, m(100))
+    console.log('kkt.approve')
+    await chef.connect(accounts[1]).deposit(pid, m(100), {gasLimit:BigNumber.from('8000000')})
+    console.log('dev chef.deposit')
     
-    let factoryAbi = getAbi('./artifacts/contracts/LossFactory.sol/LossFactory.json')
-    let factoryAddress = '0xc20da87779ac7c9ff764667f6b81c46a0a0131e0' //okex_testnet
-    const factory = new ethers.Contract(factoryAddress, factoryAbi, accounts[0])
-    console.log('LossFactory now feeTo:', await factory.feeTo())
-    console.log('INIT_CODE_PAIR_HASH:', await factory.INIT_CODE_PAIR_HASH())
+    let kktNum = d(await kkt.balanceOf(devAddress))
+    console.log('dev KKT充值后余额', kktNum)
 
-    let allPairsLength = await factory.allPairsLength()
-    console.log('allPairsLength:', allPairsLength.toNumber())
+    console.log('done')
+}
 
-    let pairAddress = await factory.allPairs(allPairsLength.toNumber() - 1)
-    console.log('pairAddress:', pairAddress)
 
-    let pairAbi = getAbi('./artifacts/contracts/LossPair.sol/LossPair.json')
-    const pair = new ethers.Contract(pairAddress, pairAbi, accounts[0])
-    let reserves = await pair.getReserves()
-    console.log('reserves:', reserves[0].toNumber(), reserves[1].toNumber(), reserves[2])
+async function afterMoment() {
+    const accounts = await hre.ethers.getSigners()
+    const devAddress = accounts[1].address
+
+    let KKTabi = getAbi('./artifacts/contracts/KingKongToken.sol/KingKongToken.json')
+    const kkt = new ethers.Contract(kktAAddress, KKTabi, accounts[1])
+
+    let chefabi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
+    const chef = new ethers.Contract(chefAAddress, chefabi, accounts[1])
+
+    let poolLength = await chef.poolLength()
+    console.log('poolLength:', poolLength.toNumber())
+    if (poolLength == 0) {
+        return
+    }
+    let pid = 0
+
+    let pool = await chef.poolInfo(pid)
+    console.log('pool:', pool.lpToken, d(pool.allocPoint), d(pool.accKKTPerShare), d(pool.lastRewardBlock))
+
+    // //挖矿收益
+    let kktNum = d(await chef.pendingKKT(pid, devAddress))
+    console.log('挖矿收益', kktNum)
+    
+    //提现
+    await chef.withdraw(pid, m(100), {gasLimit:BigNumber.from('8000000')})
+    console.log('提现')
+    
+    kktNum = d(await kkt.balanceOf(devAddress))
+    console.log('KKT提现后余额', kktNum)
 
     console.log('done')
 }
@@ -35,7 +88,16 @@ function getAbi(jsonPath) {
 }
 
 
-main()
+function m(num) {
+    return BigNumber.from('1000000000000000000').mul(num)
+}
+
+function d(bn) {
+    return bn.div('1000000000').toNumber() / 1000000000
+}
+
+
+afterMoment()
     .then(() => process.exit(0))
     .catch(error => {
         console.error(error)
