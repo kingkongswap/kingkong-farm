@@ -10,6 +10,7 @@
 7. KingKongToken.sol add TOTAL_SUPPLY_LIMIT in mint(), TOTAL_SUPPLY_LIMIT is 100m
 8. KingKongToken.sol use @dev instead of @notice
 9. Timelock.sol line 122 Use "{value: ...}" instead of ".value(...)"
+10. add Multicall.sol for governance
 
 ## deploy
 1. npm i
