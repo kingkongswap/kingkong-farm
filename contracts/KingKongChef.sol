@@ -14,26 +14,32 @@ contract KingKongChef is Ownable {
     using SafeERC20 for IERC20;
 
     struct PoolInfo {
-        IERC20 rewardToken;
-        uint256 rewardPerBlock;
-        uint256 lastRewardBlock;
-        uint256 accPerShare;
-        uint256 balance;
-        uint256 amount;
+        IERC20 rewardToken; //挖什么币
+        uint256 rewardPerBlock; //每个区块出多少个币
+        uint256 lastRewardBlock; //最后一次更新accPerShare的区块高度
+        uint256 accPerShare; //用户持有一个stakeToken，可以挖多少个rewardToken，考虑精度，这个值要乘以1e12，随时间自增，自增即出矿
+        uint256 balance; //矿池还有多少币可以挖
+        uint256 amount; //创建矿池的时候投放了多少个币
+        uint256 bonusStartBlock; //什么时候开始挖
+        uint256 bonusEndBlock; //什么时候结束，创建矿池的时候计算出来的
+        address back; //创建矿池的时候矿币从哪来的，移除矿池的时候如果有剩余的矿币就原路返回
+        //user->rewardDebt，记录用户已经挖了多少，随时间自增，如果用户中途进来，那么之前错过的也算入rewardDebt
+        mapping (address => uint256) rewardDebt;
     }
 
-    //active pools, cap limited 9
+    //同时挖的矿池的地址
     address[] public activeArr = new address[](9);
 
-    IERC20 public kkt;
-
-    address public devaddr;
-
-    //user->rewardToken->rewardDebt
-    mapping (address => mapping (address => uint256)) public rewardDebt;
-
+    //rewardToken->PoolInfo，通过activeArr拿到矿池地址，再通过poolMap找到矿池信息
     mapping (address => PoolInfo) public poolMap;
 
+    //抵押币
+    IERC20 public stakeToken;
+
+    //总共抵押了多少个币，替代stakeToken.balanceOf(address(this))，避免直接transfer到合约造成数据不准
+    uint256 public totalStake;
+
+    //记录每个用户抵押了多少个币
     mapping (address => uint256) public balanceOf;
 
     event Deposit(address indexed user, uint256 amount);
@@ -41,26 +47,37 @@ contract KingKongChef is Ownable {
     event Harvest(address indexed user, address indexed rewardToken, uint256 amount, address indexed to);
 
 
-    constructor(IERC20 _kkt) public {
-        kkt = _kkt;
-        devaddr = address(msg.sender);
+    constructor(IERC20 _stakeToken) public {
+        stakeToken = _stakeToken;
     }
 
+    //查看用户在某个矿池的rewardDebt，测试的时候用
+    function rewardDebt(address _user, IERC20 _rewardToken) public view returns (uint256) {
+        //从poolMap取的pool，必须是storage，因为pool里面有mapping
+        PoolInfo storage pool = poolMap[address(_rewardToken)];
+        if (address(pool.rewardToken) == address(0)) {
+            return 0;
+        }
+        return pool.rewardDebt[_user];
+    }
 
-    function addPool(IERC20 _rewardToken, uint256 _rewardPerBlock, uint256 _amount) public onlyOwner {
-        require(_rewardPerBlock > 0, 'addPool: rewardPerBlock error');
-        require(_amount > 0, 'addPool: amount error');
+    //需要把矿币approve给本合约，再由管理员调用addPool，一个矿币对应一个矿池，不能两个矿池都挖同一种币
+    function addPool(IERC20 _rewardToken, uint256 _rewardPerBlock, uint256 _bonusStartBlock, uint256 _bonusEndBlock, address _from) public onlyOwner {
+        require(_bonusStartBlock > block.number, 'addPool: bonusStartBlock error');
 
-        PoolInfo memory pool = poolMap[address(_rewardToken)];
+        //bonusStartBlock是可以挖的第一个区块，bonusEndBlock是结束区块，不能挖
+        uint256 amount = _bonusEndBlock.sub(_bonusStartBlock).mul(_rewardPerBlock);
+        require(amount > 0, 'addPool: amount error');
+
+        PoolInfo storage pool = poolMap[address(_rewardToken)];
         require(address(pool.rewardToken) == address(0), 'addPool: already exist');
 
-        _rewardToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        _rewardToken.safeTransferFrom(_from, address(this), amount);
 
         bool success = false;
         address[] memory actives = activeArr;
         for (uint8 i = 0; i < actives.length; i++) {
-            address rewardAddress = actives[i];
-            if (rewardAddress == address(0)) {
+            if (actives[i] == address(0)) {
                 activeArr[i] = address(_rewardToken);
                 success = true;
                 break;
@@ -69,159 +86,179 @@ contract KingKongChef is Ownable {
 
         require(success, 'addPool: active full');
 
-        pool = PoolInfo(_rewardToken, _rewardPerBlock, block.number, 0, _amount, _amount);
-        poolMap[address(_rewardToken)] = pool;
+        poolMap[address(_rewardToken)] = PoolInfo(_rewardToken, _rewardPerBlock, _bonusStartBlock-1, 0, amount, amount, _bonusStartBlock, _bonusEndBlock, _from);
     }
 
-
+    //移除矿池，矿池数量上限是9个，超过就需要移除老矿池
     function removePool(IERC20 _rewardToken) public onlyOwner {
-        PoolInfo memory pool = poolMap[address(_rewardToken)];
+        PoolInfo storage pool = poolMap[address(_rewardToken)];
         require(address(pool.rewardToken) != address(0), 'removePool: not exist');
 
-        //无人领取的rewardToken，转给开发者
-        uint256 balance = pool.rewardToken.balanceOf(address(this));
-        if (balance >= pool.balance && pool.balance > 0) {
-            pool.rewardToken.safeTransfer(devaddr, pool.balance);
+        //剩余的矿币，原路返回
+        if (pool.balance > 0) {
+            uint256 balance = pool.rewardToken.balanceOf(address(this));
+            if (balance >= pool.balance) {
+                pool.rewardToken.safeTransfer(pool.back, pool.balance);
+            }
         }
 
         delete poolMap[address(_rewardToken)];
 
         address[] memory actives = activeArr;
         for (uint8 i = 0; i < actives.length; i++) {
-            address rewardAddress = actives[i];
-            if (rewardAddress == address(_rewardToken)) {
+            if (actives[i] == address(_rewardToken)) {
                 delete activeArr[i];
                 break;
             }
         }
     }
 
-
+    //经过了多少个区块
     function getMultiplier(uint256 _from, uint256 _to) public pure returns (uint256) {
-        return _to.sub(_from);
+        if (_to > _from) {
+            return _to - _from;
+        }
+        return 0;
     }
 
-
+    //待收矿的数量
     function pendingReward(address _user, address _rewardAddress) public view returns (uint256) {
-        PoolInfo memory pool = poolMap[_rewardAddress];
+        PoolInfo storage pool = poolMap[_rewardAddress];
         if (address(pool.rewardToken) == address(0)) {
+            return 0;
+        }
+        uint256 myStakeAmount = balanceOf[_user];
+        if (myStakeAmount == 0) {
+            return 0;
+        }
+
+        //没开始或者已经结束了
+        if (block.number < pool.bonusStartBlock || block.number >= pool.bonusEndBlock) {
             return 0;
         }
         
         uint256 accPerShare = pool.accPerShare;
-        uint256 supply = kkt.balanceOf(address(this));
-        if (block.number > pool.lastRewardBlock && supply != 0) {
+        if (block.number > pool.lastRewardBlock && totalStake != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 reward = multiplier.mul(pool.rewardPerBlock);
-            accPerShare = accPerShare.add(reward.mul(1e12).div(supply));
-
-            // console.log('pendingReward supply', supply);
-            // console.log('pendingReward multiplier', multiplier);
-            // console.log('pendingReward reward', reward);
-            // console.log('pendingReward accPerShare', accPerShare);
+            accPerShare = accPerShare.add(reward.mul(1e12).div(totalStake));
         }
-        
-        uint256 myKKT = balanceOf[_user];
-        uint256 myRewardDebt = rewardDebt[_user][_rewardAddress];
-        // console.log('pendingReward myKKT', myKKT);
-        // console.log('pendingReward myRewardDebt', myRewardDebt);
 
-        return myKKT.mul(accPerShare).div(1e12).sub(myRewardDebt);
+        uint256 myRewardDebt = pool.rewardDebt[_user];
+        // console.log('[KingKongChef] pendingReward', accPerShare, myRewardDebt);
+        return myStakeAmount.mul(accPerShare).div(1e12).sub(myRewardDebt);
     }
 
-
-    function massUpdatePools() public {
+    //一次更新全部矿池的accPerShare和lastRewardBlock
+    function massUpdatePools() internal {
         address[] memory actives = activeArr;
-        uint256 supply = kkt.balanceOf(address(this));
-
         for (uint8 i = 0; i < actives.length; i++) {
             address rewardAddress = actives[i];
             if (rewardAddress != address(0)) {
 
-                PoolInfo memory pool = poolMap[rewardAddress];
+                PoolInfo storage pool = poolMap[rewardAddress];
                 if (block.number <= pool.lastRewardBlock) {
+                    //没到开挖的时间，或者已经更新过了
                     continue;
                 }
-                if (supply == 0) {
+                if (totalStake == 0) {
+                    //特殊情况，跳过出矿
                     pool.lastRewardBlock = block.number;
                     continue;
                 }
                 uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
                 uint256 reward = multiplier.mul(pool.rewardPerBlock);
-                pool.accPerShare = pool.accPerShare.add(reward.mul(1e12).div(supply));
+                pool.accPerShare = pool.accPerShare.add(reward.mul(1e12).div(totalStake));
                 pool.lastRewardBlock = block.number;
-
-                poolMap[rewardAddress] = pool;
                 // console.log('updatePool', pool.accPerShare, pool.lastRewardBlock);
             }
         }
     }
 
-
+    //充值stakeToken
     function deposit(uint256 _amount) public {
         require(_amount > 0, 'deposit: not good');
 
-        uint256 myKKT = balanceOf[msg.sender];
-        if (myKKT == 0) {
+        uint256 myStakeAmount = balanceOf[msg.sender];
+        if (myStakeAmount == 0) {
+            //首次充值进来，rewardDebt的更新不能用harvestAll，massUpdatePools只是做个义务劳动
             massUpdatePools();
         } else {
-            harvestAll();
+            //先收矿
+            harvestAll(msg.sender);
         }
 
-        kkt.safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 myKKT_after = myKKT.add(_amount);
-        balanceOf[msg.sender] = myKKT_after;
+        //充值
+        stakeToken.safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 myStakeAmount_after = myStakeAmount.add(_amount);
+        balanceOf[msg.sender] = myStakeAmount_after;
+        totalStake = totalStake.add(_amount);
 
-        if (myKKT == 0) {
-            address[] memory actives = activeArr;
-            for (uint8 i = 0; i < actives.length; i++) {
-                address rewardAddress = actives[i];
-                if (rewardAddress != address(0)) {
-                    PoolInfo memory pool = poolMap[rewardAddress];
-                    rewardDebt[msg.sender][rewardAddress] = myKKT_after.mul(pool.accPerShare).div(1e12);
-                }
+        //充值提现，都要重新计算rewardDebt，当作是之前的已经结算了，根据新的stake来计算后续的产出
+        address[] memory actives = activeArr;
+        for (uint8 i = 0; i < actives.length; i++) {
+            address rewardAddress = actives[i];
+            if (rewardAddress != address(0)) {
+                PoolInfo storage pool = poolMap[rewardAddress];
+                //首次充值，由公式计算rewardDebt
+                pool.rewardDebt[msg.sender] = myStakeAmount_after.mul(pool.accPerShare).div(1e12);
             }
         }
 
         emit Deposit(msg.sender, _amount);
     }
 
-
+    //提现stakeToken
     function withdraw(uint256 _amount) public {
-        require(balanceOf[msg.sender] >= _amount && _amount > 0, 'withdraw: not good');
+        uint256 myStakeAmount = balanceOf[msg.sender];
+        require(myStakeAmount >= _amount && _amount > 0, 'withdraw: not good');
 
-        harvestAll();
+        //先收矿
+        harvestAll(msg.sender);
 
-        balanceOf[msg.sender] = balanceOf[msg.sender].sub(_amount);
-        kkt.safeTransfer(msg.sender, _amount);
+        //提现
+        uint256 myStakeAmount_after = myStakeAmount.sub(_amount);
+        balanceOf[msg.sender] = myStakeAmount_after;
+        totalStake = totalStake.sub(_amount);
+        stakeToken.safeTransfer(msg.sender, _amount);
+
+        //充值提现，都要重新计算rewardDebt，当作是之前的已经结算了，根据新的stake来计算后续的产出
+        address[] memory actives = activeArr;
+        for (uint8 i = 0; i < actives.length; i++) {
+            address rewardAddress = actives[i];
+            if (rewardAddress != address(0)) {
+                PoolInfo storage pool = poolMap[rewardAddress];
+                //首次充值，由公式计算rewardDebt
+                pool.rewardDebt[msg.sender] = myStakeAmount_after.mul(pool.accPerShare).div(1e12);
+            }
+        }
 
         emit Withdraw(msg.sender, _amount);
     }
 
-
-    function harvestAll() public {
+    //收矿，可以指定接收账户，一般是msg.sender自己
+    function harvestAll(address to) public {
         massUpdatePools();
 
         address[] memory actives = activeArr;
         for (uint8 i = 0; i < actives.length; i++) {
             address rewardAddress = actives[i];
             if (rewardAddress != address(0)) {
-                harvest(rewardAddress, msg.sender);
+                harvest(rewardAddress, to);
             }
         }
     }
 
-
+    //收某个矿，为了避免混乱，标记为internal，只允许harvestAll
     function harvest(address _rewardAddress, address to) internal {
-        uint256 myKKT = balanceOf[msg.sender];
+        uint256 myStakeAmount = balanceOf[msg.sender];
         uint256 pending = pendingReward(msg.sender, _rewardAddress);
-        PoolInfo memory pool = poolMap[_rewardAddress];
+        PoolInfo storage pool = poolMap[_rewardAddress];
 
         if (pending > 0) {
-            pool.rewardToken.safeTransfer(to, pending);
             pool.balance = pool.balance.sub(pending);
-            poolMap[_rewardAddress] = pool;
-            rewardDebt[msg.sender][_rewardAddress] = myKKT.mul(pool.accPerShare).div(1e12);
+            pool.rewardDebt[msg.sender] = myStakeAmount.mul(pool.accPerShare).div(1e12);
+            pool.rewardToken.safeTransfer(to, pending);
             emit Harvest(msg.sender, _rewardAddress, pending, to);
         }
     }
