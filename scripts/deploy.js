@@ -13,13 +13,21 @@ async function main() {
 	await kkt.mint(devAddress, m(200000))
 	console.log('dev KKT balance:', d(await kkt.balanceOf(devAddress)))
 	console.log('KKT totalSupply:', d(await kkt.totalSupply()))
+
+	let user1 = '0x662546Dcc9f158a9ABb4d1c3B369B07bC67969D6'
+	let user2 = '0x3A40066D1dC27d14C721e4135cF02DCb20C9AFE0'
+	let user3 = '0x011EBb673b8e7e042C42121CCA062FB7b27BdCFE'
+	await kkt.connect(accounts[1]).transfer(user1, m(10000), {gasLimit:BigNumber.from('8000000')})
+	await kkt.connect(accounts[1]).transfer(user2, m(10000), {gasLimit:BigNumber.from('8000000')})
+	await kkt.connect(accounts[1]).transfer(user3, m(10000), {gasLimit:BigNumber.from('8000000')})
+	console.log('kkt transfer done')
 	
 	const MasterChef = await hre.ethers.getContractFactory('MasterChef')
-	const chef = await MasterChef.deploy(kkt.address, devAddress, m(31), m(0))
+	const chef = await MasterChef.deploy(kkt.address, devAddress, m(30), BigNumber.from(0))
 	await chef.deployed()
 	console.log('MasterChef deployed to:', chef.address)
 	
-	await kkt.transferOwnership(chef.address)
+	await kkt.transferOwnership(chef.address, {gasLimit:BigNumber.from('8000000')})
 	console.log('KKT ownership transfer to MasterChef')
 	
 	console.log('MasterChef owner is:', await chef.owner())
@@ -27,26 +35,9 @@ async function main() {
 
 	console.log('done')
 
-	//localhost
-	// KKT deployed to: 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
-	// dev KKT balance: 200000
-	// KKT totalSupply: 200000
-	// MasterChef deployed to: 0x610178dA211FEF7D417bC0e6FeD39F05609AD788
-	// MasterChef owner is: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-	// MasterChef dev is: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
-
 	//okex_testnet
-	// KKT deployed to: 0xAc8cD27c2e74DfCCD8B01aeEF84aC47d1629C6b0
-	// dev KKT balance: 0
-	// KKT totalSupply: 0
-	// MasterChef deployed to: 0x60c186Fc32f29906655Df54f2bB5E0f11C04a3c9
-
-	//bsc_testnet
-	// KKT deployed to: 0xd5151AF9241eAa8976b26E0812dB852908B23Eb5
-	// dev KKT balance: 0
-	// KKT totalSupply: 0
-	// MasterChef deployed to: 0x8FBa34af5d584AaA79CE12DD96CE3e969bf3B7D5
-	// KKT ownership transfer to MasterChef
+	// KKT deployed to: 0x4888097d1B29b439C55C6d3E44031eE658237dE3
+	// MasterChef deployed to: 0xE73d4CE78e14B6c65DC8dC25d3fBE20dcfcfF6c3
 	// MasterChef owner is: 0xE44081Ee2D0D4cbaCd10b44e769A14Def065eD4D
 	// MasterChef dev is: 0x50D8aD8e7CC0C9c2236Aac2D2c5141C164168da3
 }

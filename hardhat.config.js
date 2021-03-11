@@ -23,7 +23,7 @@ module.exports = {
 
 		},
 		okex_testnet: {
-			url: 'http://39.103.147.63:26659',
+			url: 'http://test-node.kingkong.exchange:16659',
 			chainId: 65,
 			from: process.env.ETH_ADDRESS_0,
 			accounts: [
