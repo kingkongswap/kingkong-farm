@@ -1,8 +1,8 @@
 const { expect, assert } = require('chai');
 const { BigNumber } = require('ethers');
 
-//完整走完一个流程，先addPool再deposit
-describe('KingKongChef-1user-1pool', function () {
+//完整走完一个稍复杂流程
+describe('KingKongChef-1user-1pool-2', function () {
 	let accounts
 	let erc
 	let kkt

@@ -45,7 +45,7 @@ contract KingKongChef is Ownable {
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event Harvest(address indexed user, address indexed rewardToken, uint256 amount, address indexed to);
-
+    event EmergencyWithdraw(address indexed user, uint256 amount);
 
     constructor(IERC20 _stakeToken) public {
         stakeToken = _stakeToken;
@@ -157,8 +157,10 @@ contract KingKongChef is Ownable {
             if (rewardAddress != address(0)) {
 
                 PoolInfo storage pool = poolMap[rewardAddress];
+                if (block.number < pool.bonusStartBlock || block.number >= pool.bonusEndBlock) {
+                    continue;
+                }
                 if (block.number <= pool.lastRewardBlock) {
-                    //没到开挖的时间，或者已经更新过了
                     continue;
                 }
                 if (totalStake == 0) {
@@ -262,4 +264,18 @@ contract KingKongChef is Ownable {
             emit Harvest(msg.sender, _rewardAddress, pending, to);
         }
     }
+
+    // Withdraw without caring about rewards. EMERGENCY ONLY.
+    function emergencyWithdraw() public {
+        uint256 myStakeAmount = balanceOf[msg.sender];
+        require(myStakeAmount > 0, 'withdraw: not good');
+        
+        //提现
+        balanceOf[msg.sender] = 0;
+        totalStake = totalStake.sub(myStakeAmount);
+        stakeToken.safeTransfer(msg.sender, myStakeAmount);
+
+        emit EmergencyWithdraw(msg.sender, myStakeAmount);
+    }
+
 }
