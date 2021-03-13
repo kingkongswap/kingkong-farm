@@ -275,11 +275,11 @@ describe('KingKongChef-2user-2pool-1', function () {
 		// 	'balance:', n(pool.balance), 'amount:', n(pool.amount)
 		// 	)
 		// console.log(
-		// 	'account0 rewardDebt:', n(await chef.rewardDebt(accounts[0].address, erc.address)), 
+		// 	'account0 rewardDebt:', n(await chef.getRewardDebt(accounts[0].address, erc.address)), 
 		// 	'pendingReward', n(await chef.pendingReward(accounts[0].address, erc.address))
 		// 	)
 		// console.log(
-		// 	'account1 rewardDebt:', n(await chef.rewardDebt(accounts[1].address, erc.address)), 
+		// 	'account1 rewardDebt:', n(await chef.getRewardDebt(accounts[1].address, erc.address)), 
 		// 	'pendingReward', n(await chef.pendingReward(accounts[1].address, erc.address))
 		// 	)
 		console.log('')
