@@ -1,7 +1,7 @@
 const { expect, assert } = require('chai');
 const { BigNumber } = require('ethers');
 
-//测试可能出错的情况
+//针对KingKongChef的数据结构做的测试，对应PoolTest.sol
 describe('Pool-test', function () {
 	let accounts
 	let erc

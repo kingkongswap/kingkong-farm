@@ -22,13 +22,17 @@ async function main() {
 	await chef.deployed()
 	console.log('KingKongChef deployed to:', chef.address)
     
-    await okb.approve(chef.address, m(100000))
     await delay(10)
-    await chef.addPool(okb.address, m(1), m(100000))
+    await okb.approve(chef.address, m(10000))
+    let blockNum = await ethers.provider.getBlockNumber()
+    startBlock = blockNum + 100
+    await chef.addPool(okb.address, m(1), b(startBlock), b(startBlock+10000), accounts[0].address, {gasLimit:BigNumber.from('8000000')})
+	console.log('addPool')
     
-    await nas.approve(chef.address, m(200000))
     await delay(10)
-    await chef.addPool(nas.address, m(2), m(200000))
+    await nas.approve(chef.address, m(10000))
+    await chef.addPool(nas.address, m(1), b(startBlock), b(startBlock+10000), accounts[0].address, {gasLimit:BigNumber.from('8000000')})
+	console.log('addPool')
 
 	console.log('done')
 
@@ -48,6 +52,14 @@ function m(num) {
 
 function d(bn) {
     return bn.div('1000000000').toNumber() / 1000000000
+}
+
+function b(num) {
+    return BigNumber.from(num)
+}
+
+function n(bn) {
+    return bn.toNumber()
 }
 
 async function delay(sec) {
