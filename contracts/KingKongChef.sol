@@ -4,7 +4,6 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./KingKongToken.sol";
 
 import "hardhat/console.sol";
@@ -51,8 +50,8 @@ contract KingKongChef is Ownable {
     event EmergencyWithdraw(address indexed user, uint256 amount);
 
 
-    constructor(IERC20 _stakeToken) public {
-        stakeToken = _stakeToken;
+    constructor(address _stakeAddress) public {
+        stakeToken = IERC20(_stakeAddress);
     }
 
 
@@ -67,38 +66,54 @@ contract KingKongChef is Ownable {
     }
 
 
-    //需要把矿币approve给本合约，再由管理员调用addPool，一个矿币对应一个矿池，不能两个矿池都挖同一种币
-    function addPool(IERC20 _rewardToken, uint256 _rewardPerBlock, uint256 _bonusStartBlock, uint256 _bonusEndBlock, address _from) public onlyOwner {
+    //需要把矿币tansfer给本合约，再由管理员调用addPool，一个矿币对应一个矿池，不能两个矿池都挖同一种币
+    function addPool(address _rewardAddress, uint256 _rewardPerBlock, uint256 _bonusStartBlock, uint256 _bonusEndBlock, address _back) public onlyOwner {
         require(_bonusStartBlock > block.number, 'addPool: bonusStartBlock error');
 
-        //bonusStartBlock是可以挖的第一个区块，bonusEndBlock是结束区块，不能挖
-        uint256 amount = _bonusEndBlock.sub(_bonusStartBlock).mul(_rewardPerBlock);
-        require(amount > 0, 'addPool: amount error');
-
-        PoolInfo storage pool = poolMap[address(_rewardToken)];
+        PoolInfo memory pool = poolMap[_rewardAddress];
         require(address(pool.rewardToken) == address(0), 'addPool: already exist');
 
-        _rewardToken.safeTransferFrom(_from, address(this), amount);
+        //bonusStartBlock是可以挖的第一个区块，bonusEndBlock是结束区块，不能挖
+        uint256 needAmount = _bonusEndBlock.sub(_bonusStartBlock).mul(_rewardPerBlock);
+        IERC20 rewardToken = IERC20(_rewardAddress);
+        uint256 amount = rewardToken.balanceOf(address(this));
+
+        //避免把用户stake的数量也算作amount
+        if (_rewardAddress == address(stakeToken)) {
+            amount = amount.sub(totalStake);
+        }
+        require(amount >= needAmount && needAmount > 0, 'addPool: amount error');
+
+        //如果转进来的reward多了，退给_back
+        uint256 bal = amount.sub(needAmount);
+        if (bal > 0) {
+            rewardToken.safeTransfer(_back, bal);
+        }
 
         bool success = false;
         address[] memory actives = activeArr;
         for (uint8 i = 0; i < actives.length; i++) {
-            if (actives[i] == address(0)) {
-                activeArr[i] = address(_rewardToken);
-                success = true;
-                break;
+            address activeAddress = actives[i];
+            if (activeAddress == address(0)) {
+                if (!success) {
+                    activeArr[i] = _rewardAddress;
+                    success = true;
+                }
+            } else {
+                pool = poolMap[activeAddress];
+                require(pool.poolId != block.number, 'addPool: poolId error');
             }
         }
 
         require(success, 'addPool: active full');
 
-        poolMap[address(_rewardToken)] = PoolInfo(block.number, _rewardToken, _rewardPerBlock, _bonusStartBlock-1, 0, amount, amount, _bonusStartBlock, _bonusEndBlock, _from);
+        poolMap[_rewardAddress] = PoolInfo(block.number, rewardToken, _rewardPerBlock, _bonusStartBlock-1, 0, needAmount, needAmount, _bonusStartBlock, _bonusEndBlock, _back);
     }
 
 
     //移除矿池，矿池数量上限是9个，超过就需要移除老矿池
-    function removePool(IERC20 _rewardToken) public onlyOwner {
-        PoolInfo storage pool = poolMap[address(_rewardToken)];
+    function removePool(address _rewardAddress) public onlyOwner {
+        PoolInfo storage pool = poolMap[_rewardAddress];
         require(address(pool.rewardToken) != address(0), 'removePool: not exist');
 
         //剩余的矿币，原路返回
@@ -109,11 +124,11 @@ contract KingKongChef is Ownable {
             }
         }
 
-        delete poolMap[address(_rewardToken)];
+        delete poolMap[_rewardAddress];
 
         address[] memory actives = activeArr;
         for (uint8 i = 0; i < actives.length; i++) {
-            if (actives[i] == address(_rewardToken)) {
+            if (actives[i] == _rewardAddress) {
                 delete activeArr[i];
                 break;
             }

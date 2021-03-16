@@ -2,6 +2,10 @@ const { BigNumber } = require('ethers')
 const hre = require('hardhat')
 
 async function main() {
+	let user1 = '0x662546Dcc9f158a9ABb4d1c3B369B07bC67969D6'
+	let user2 = '0x3A40066D1dC27d14C721e4135cF02DCb20C9AFE0'
+	let user3 = '0x011EBb673b8e7e042C42121CCA062FB7b27BdCFE'
+	
 	const accounts = await hre.ethers.getSigners()
 	const devAddress = accounts[1].address
 
@@ -14,12 +18,9 @@ async function main() {
 	console.log('dev KKT balance:', d(await kkt.balanceOf(devAddress)))
 	console.log('KKT totalSupply:', d(await kkt.totalSupply()))
 
-	let user1 = '0x662546Dcc9f158a9ABb4d1c3B369B07bC67969D6'
-	let user2 = '0x3A40066D1dC27d14C721e4135cF02DCb20C9AFE0'
-	let user3 = '0x011EBb673b8e7e042C42121CCA062FB7b27BdCFE'
-	await kkt.connect(accounts[1]).transfer(user1, m(10000), {gasLimit:BigNumber.from('8000000')})
-	await kkt.connect(accounts[1]).transfer(user2, m(10000), {gasLimit:BigNumber.from('8000000')})
-	await kkt.connect(accounts[1]).transfer(user3, m(10000), {gasLimit:BigNumber.from('8000000')})
+	await kkt.connect(accounts[1]).transfer(user1, m(50000), {gasLimit:BigNumber.from('8000000')})
+	await kkt.connect(accounts[1]).transfer(user2, m(50000), {gasLimit:BigNumber.from('8000000')})
+	await kkt.connect(accounts[1]).transfer(user3, m(50000), {gasLimit:BigNumber.from('8000000')})
 	console.log('kkt transfer done')
 	
 	const MasterChef = await hre.ethers.getContractFactory('MasterChef')
