@@ -8,6 +8,7 @@ async function main() {
 	
 	const accounts = await hre.ethers.getSigners()
 	const devAddress = accounts[1].address
+	const opeAddress = accounts[2].address
 
 	const Token = await hre.ethers.getContractFactory('KingKongToken')
 	const kkt = await Token.deploy()
@@ -24,15 +25,17 @@ async function main() {
 	console.log('kkt transfer done')
 	
 	const MasterChef = await hre.ethers.getContractFactory('MasterChef')
-	const chef = await MasterChef.deploy(kkt.address, devAddress, m(30), BigNumber.from(0))
+	const chef = await MasterChef.deploy(kkt.address, devAddress, opeAddress, m(30), BigNumber.from(0))
 	await chef.deployed()
 	console.log('MasterChef deployed to:', chef.address)
 	
 	await kkt.transferOwnership(chef.address, {gasLimit:BigNumber.from('8000000')})
 	console.log('KKT ownership transfer to MasterChef')
 	
+	await delay(10)
 	console.log('MasterChef owner is:', await chef.owner())
 	console.log('MasterChef dev is:', await chef.devaddr())
+	console.log('MasterChef ope is:', await chef.opeaddr())
 
 	console.log('done')
 
@@ -43,6 +46,11 @@ async function main() {
 	// MasterChef dev is: 0x50D8aD8e7CC0C9c2236Aac2D2c5141C164168da3
 }
 
+async function delay(sec) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, sec * 1000);
+    })
+}
 
 function m(num) {
     return BigNumber.from('1000000000000000000').mul(num)

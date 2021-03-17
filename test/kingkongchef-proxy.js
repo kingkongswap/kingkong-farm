@@ -23,7 +23,7 @@ describe('KingKongChef-proxy', function () {
 		kkt = await KKT.deploy()
 		await kkt.deployed()
 
-		const Deployer = await ethers.getContractFactory('KingKongChefDeployer')
+		const Deployer = await ethers.getContractFactory('Deployer')
 		deployer = await Deployer.deploy()
 		await deployer.deployed()
         console.log('deployer:', deployer.address)
