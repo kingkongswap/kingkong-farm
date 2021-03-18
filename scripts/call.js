@@ -2,8 +2,20 @@ const hre = require('hardhat')
 const fs = require('fs')
 const { BigNumber } = require('ethers')
 
-const kktAAddress = '0x4888097d1B29b439C55C6d3E44031eE658237dE3'
-const chefAAddress = '0xE73d4CE78e14B6c65DC8dC25d3fBE20dcfcfF6c3'
+// lptoken: 0x695Ef962b4Ee88ED193148E486208D58d184D203 WOKT-USDT 3
+// lptoken: 0xAA62cf5bf12D541335AC776eCBFd3BEBBDe5cF21 KKT-USDT 5
+// lptoken: 0xa67C92B04d66aB92c587f224b37CCd4E2055aA0d KKT-WOKT 5
+// lptoken: 0x2BC09D8f6bEc3C8DdccdbE18d1FdB0E615845dF3 NAS-USDT 3
+// lptoken: 0x1e6A2B2701A5423930cF0Da95A7A007D9A26D2f7 OKB-USDT 2
+// lptoken: 0xf0858096473087b12634999E43aC14945841bfbA BTCK-USDT 1
+// lptoken: 0x8D802439F1f7Cbf93F3384d95857b61DD7FA901b ETHK-USDT 1
+// lptoken: 0xF46e0C15c1aEEEB8cFd3000F1EC22Bc2D2d9641e LTCK-USDT 1
+// lptoken: 0x0E4780F2462aa5a8B098eC82324352991B45BEb0 DOTK-USDT 1
+// lptoken: 0x22B65C78e675083Fe9ECE0d2c5736a84307aE5A1 USDT-FILK 1
+// lptoken: 0x396BB9bFe7f39e2BDa4E85C55D3d67014Bb36FFa USDK-USDT 1
+
+const kktAAddress = '0x4962Bf3133dFb5630e3fEd6bb55AC35731BCa3fF'
+const chefAAddress = '0xe5Fa42c0dEA555C65c479dd4b29CA91BE9374694'
 
 async function main() {
     const accounts = await hre.ethers.getSigners()
@@ -17,46 +29,32 @@ async function main() {
 
     // console.log('MasterChef owner is:', await chef.owner())
 	// console.log('MasterChef dev is:', await chef.devaddr())
-    console.log('kktPerBlock:', dpow(await chef.kktPerBlock(), 18))
-    
-    // await addLiquidity(KKT, USDT) //pair 0xc23F883d711846DEd91c4ABC6B6ceC004bE2c77c
-    // await addLiquidity(NAS, USDT)  //pair 0x240324f119a8159c9AA6ED107BA7244213524768
-    // await addLiquidityETH(KKT) //pair 0xE63d2bc2945689126C514A8497b0c04E5C9f8446
-    // await addLiquidityETH(USDT) //pair 0xfeE7E19eDC2D945103e64827cf4A81Ce649d9079
-    // await addLiquidityETH(OKB) //pair 0x5c71B198c53E4FF06F2bcE6DeE283b28C014F9b2
-    // const OKB = '0xda9d14072ef2262c64240da3a93fea2279253611' //官方
-    // const NAS = '0x6FD9dB63dbC6BE452ae7B0Fe9995c81d967870Bb'
-    // const DAI = '0x0586e702605d7206edD283D4311B38AEB579d7BC'
-    // const USDT = '0xe579156f9decc4134b5e3a30a24ac46bb8b01281' //官方
-    // const KKT = '0x4888097d1B29b439C55C6d3E44031eE658237dE3'
-    // const WOKT = '0x2219845942d28716c0f7c605765fabdca1a7d9e0' //官方
+    // console.log('kktPerBlock:', dpow(await chef.kktPerBlock(), 18))
 
-    await addPool('0xc23F883d711846DEd91c4ABC6B6ceC004bE2c77c', 5)
-    await delay(15)
-    await addPool('0xE63d2bc2945689126C514A8497b0c04E5C9f8446', 5)
-    await delay(15)
-    await addPool('0x240324f119a8159c9AA6ED107BA7244213524768', 3)
-    await delay(15)
-    await addPool('0xfeE7E19eDC2D945103e64827cf4A81Ce649d9079', 3)
-    await delay(15)
-    await addPool('0x5c71B198c53E4FF06F2bcE6DeE283b28C014F9b2', 2)
-    await delay(15)
-    await addPool('0x2219845942d28716c0f7c605765fabdca1a7d9e0', 1)
-    await delay(15)
-    await addPool('0xda9d14072ef2262c64240da3a93fea2279253611', 1)
-    await delay(15)
-    await addPool('0x6FD9dB63dbC6BE452ae7B0Fe9995c81d967870Bb', 1)
+    // await addPool('0x695Ef962b4Ee88ED193148E486208D58d184D203', 3)
+    // await delay(10)
+    // await addPool('0xAA62cf5bf12D541335AC776eCBFd3BEBBDe5cF21', 5)
+    // await delay(10)
+    // await addPool('0xa67C92B04d66aB92c587f224b37CCd4E2055aA0d', 5)
+    // await delay(10)
+    // await addPool('0x2BC09D8f6bEc3C8DdccdbE18d1FdB0E615845dF3', 3)
+    // await delay(10)
+    // await addPool('0x1e6A2B2701A5423930cF0Da95A7A007D9A26D2f7', 2)
+    // await delay(10)
+    // await addPool('0xf0858096473087b12634999E43aC14945841bfbA', 1)
+    // await delay(10)
+    // await addPool('0x8D802439F1f7Cbf93F3384d95857b61DD7FA901b', 1)
+    // await delay(10)
+    // await addPool('0xF46e0C15c1aEEEB8cFd3000F1EC22Bc2D2d9641e', 1)
+    // await delay(10)
+    await addPool('0x0E4780F2462aa5a8B098eC82324352991B45BEb0', 1)
+    await delay(10)
+    // await addPool('0x22B65C78e675083Fe9ECE0d2c5736a84307aE5A1', 1)
+    // await delay(10)
+    // await addPool('0x396BB9bFe7f39e2BDa4E85C55D3d67014Bb36FFa', 1)
+    // await delay(10)
 
     console.log('done')
-
-    // pool: 0xc23F883d711846DEd91c4ABC6B6ceC004bE2c77c speed: 5 KKT, USDT
-    // pool: 0xE63d2bc2945689126C514A8497b0c04E5C9f8446 speed: 5 KKT, WOKT
-    // pool: 0x240324f119a8159c9AA6ED107BA7244213524768 speed: 3 NAS, USDT
-    // pool: 0xfeE7E19eDC2D945103e64827cf4A81Ce649d9079 speed: 3 USDT, WOKT
-    // pool: 0x5c71B198c53E4FF06F2bcE6DeE283b28C014F9b2 speed: 2 OKB, WOKT
-    // pool: 0x2219845942d28716c0F7C605765fABDcA1a7d9E0 speed: 1 WOKT
-    // pool: 0xDa9d14072Ef2262c64240Da3A93fea2279253611 speed: 1 OKB
-    // pool: 0x6FD9dB63dbC6BE452ae7B0Fe9995c81d967870Bb speed: 1 NAS
 }
 
 
@@ -66,7 +64,7 @@ async function setKKTPerBlock() {
     let chefabi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
     const chef = new ethers.Contract(chefAAddress, chefabi, accounts[0])
 
-    await chef.setKKTPerBlock(pow(30, 18))
+    await chef.setKKTPerBlock(pow(30, 18), {gasLimit:BigNumber.from('8000000')})
     console.log('MasterChef setKKTPerBlock') 
 }
 
@@ -78,7 +76,7 @@ async function addPool(tokenAddress, speed) {
     const chef = new ethers.Contract(chefAAddress, chefabi, accounts[0])
 
     //一种token对应一个池子，不能重复开池子，否则会混乱
-    await chef.add(BigNumber.from(speed), tokenAddress, true)
+    await chef.add(BigNumber.from(speed), tokenAddress, true, {gasLimit:BigNumber.from('8000000')})
     console.log('addPool', tokenAddress, 'speed:', speed)
 }
 
@@ -94,7 +92,7 @@ async function viewPools() {
 
     for (let i = 0; i < poolLength; i++) {
         let pool = await chef.poolInfo(i)
-        console.log('pool:', pool.lpToken, 'speed:', pool.allocPoint.toNumber())
+        console.log('farm pool:', pool.lpToken, 'speed:', pool.allocPoint.toNumber())
     }
 }
 
@@ -121,7 +119,8 @@ async function delay(sec) {
     })
 }
 
-viewPools()
+// viewPools()
+main().then(viewPools)
     .then(() => process.exit(0))
     .catch(error => {
         console.error(error)
