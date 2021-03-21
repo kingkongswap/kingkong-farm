@@ -8,7 +8,7 @@ async function main() {
     accounts = await hre.ethers.getSigners()
     
     let chefAbi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
-    let chefAddress = '0xE73d4CE78e14B6c65DC8dC25d3fBE20dcfcfF6c3'
+    let chefAddress = '0x53a92cD4F3a453799DBE560020EaA5EEdA3C5E46'
     const chef = new ethers.Contract(chefAddress, chefAbi, accounts[0])
 
     //查看池子

@@ -15,13 +15,13 @@ async function main() {
 	await kkt.deployed()
 	console.log('KKT deployed to:', kkt.address)
 	
-	await kkt.mint(devAddress, m(200000))
-	console.log('dev KKT balance:', d(await kkt.balanceOf(devAddress)))
+	await kkt.mint(accounts[0].address, m(200000))
+	console.log('dev KKT balance:', d(await kkt.balanceOf(accounts[0].address)))
 	console.log('KKT totalSupply:', d(await kkt.totalSupply()))
 
-	await kkt.connect(accounts[1]).transfer(user1, m(50000), {gasLimit:BigNumber.from('8000000')})
-	await kkt.connect(accounts[1]).transfer(user2, m(50000), {gasLimit:BigNumber.from('8000000')})
-	await kkt.connect(accounts[1]).transfer(user3, m(50000), {gasLimit:BigNumber.from('8000000')})
+	await kkt.transfer(user1, m(50000), {gasLimit:BigNumber.from('8000000')})
+	await kkt.transfer(user2, m(50000), {gasLimit:BigNumber.from('8000000')})
+	await kkt.transfer(user3, m(50000), {gasLimit:BigNumber.from('8000000')})
 	console.log('kkt transfer done')
 	
 	const MasterChef = await hre.ethers.getContractFactory('MasterChef')
@@ -38,12 +38,6 @@ async function main() {
 	console.log('MasterChef ope is:', await chef.opeaddr())
 
 	console.log('done')
-
-	//okex_testnet
-	// KKT deployed to: 0x4888097d1B29b439C55C6d3E44031eE658237dE3
-	// MasterChef deployed to: 0xE73d4CE78e14B6c65DC8dC25d3fBE20dcfcfF6c3
-	// MasterChef owner is: 0xE44081Ee2D0D4cbaCd10b44e769A14Def065eD4D
-	// MasterChef dev is: 0x50D8aD8e7CC0C9c2236Aac2D2c5141C164168da3
 }
 
 async function delay(sec) {
