@@ -444,4 +444,8 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
     {
         return UniswapV2Library.getAmountsIn(factory, amountOut, path);
     }
+
+    function pairFor(address tokenA, address tokenB) public view returns (address pair) {
+        pair = UniswapV2Library.pairFor(factory, tokenA, tokenB);
+    }
 }

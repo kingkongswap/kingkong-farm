@@ -3,11 +3,8 @@
 Code from [Uniswap V2](https://github.com/Uniswap/uniswap-v2-core/tree/27f6354bae6685612c182c3bc7577e61bc8717e3/contracts) with the following modifications.
 
 1. Change contract version to 0.6.12 and do the necessary patching.
-2. Add `migrator` member in `UniswapV2Factory` which can be set by `feeToSetter`.
-3. Allow `migrator` to specify the amount of `liquidity` during the first mint. Disallow first mint if migrator is set.
-
-To see all diffs:
-
-```
-$ git diff 4c4bf551417e3df09a25aa0dbb6941cccbbac11a .
-```
+2. UniswapV2Factory.sol line 9, add INIT_CODE_PAIR_HASH
+3. UniswapV2Pair.sol line 105, use line 100 instead, so we can receive the 0.3% fee
+4. UniswapV2ERC20.sol line 10 line 11, lptoken name changed
+5. UniswapV2Library.sol line 26, change init_code_hash to INIT_CODE_PAIR_HASH
+6. UniswapV2Router02 line 448, add pairFor() to view the pair address
