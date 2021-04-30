@@ -14,18 +14,18 @@ const { BigNumber } = require('ethers')
 // lptoken: 0x22B65C78e675083Fe9ECE0d2c5736a84307aE5A1 USDT-FILK 1
 // lptoken: 0x396BB9bFe7f39e2BDa4E85C55D3d67014Bb36FFa USDK-USDT 1
 
-const kktAAddress = '0x4C8ef89f82E8A773F6B943200fe56d36DDBaF324'
-const chefAAddress = '0x95De83a7dAEc15FEeb0a0C1F84e47e0E93e66ddA'
+const kktAddress = '0x4C8ef89f82E8A773F6B943200fe56d36DDBaF324'
+const chefAddress = '0x95De83a7dAEc15FEeb0a0C1F84e47e0E93e66ddA'
 
 async function main() {
     const accounts = await hre.ethers.getSigners()
     const devAddress = accounts[1].address
 
     let KKTabi = getAbi('./artifacts/contracts/KingKongToken.sol/KingKongToken.json')
-    const kkt = new ethers.Contract(kktAAddress, KKTabi, accounts[0])
+    const kkt = new ethers.Contract(kktAddress, KKTabi, accounts[0])
 
     let chefabi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
-    const chef = new ethers.Contract(chefAAddress, chefabi, accounts[0])
+    const chef = new ethers.Contract(chefAddress, chefabi, accounts[0])
 
     // console.log('MasterChef owner is:', await chef.owner())
 	// console.log('MasterChef dev is:', await chef.devaddr())
@@ -62,7 +62,7 @@ async function setKKTPerBlock() {
     const accounts = await hre.ethers.getSigners()
 
     let chefabi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
-    const chef = new ethers.Contract(chefAAddress, chefabi, accounts[0])
+    const chef = new ethers.Contract(chefAddress, chefabi, accounts[0])
 
     await chef.setKKTPerBlock(pow(30, 18), {gasLimit:BigNumber.from('8000000')})
     console.log('MasterChef setKKTPerBlock') 
@@ -73,7 +73,7 @@ async function addPool(tokenAddress, speed) {
     const accounts = await hre.ethers.getSigners()
 
     let chefabi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
-    const chef = new ethers.Contract(chefAAddress, chefabi, accounts[0])
+    const chef = new ethers.Contract(chefAddress, chefabi, accounts[0])
 
     //一种token对应一个池子，不能重复开池子，否则会混乱
     await chef.add(BigNumber.from(speed), tokenAddress, true, {gasLimit:BigNumber.from('8000000')})
@@ -85,7 +85,7 @@ async function viewPools() {
     const accounts = await hre.ethers.getSigners()
 
     let chefabi = getAbi('./artifacts/contracts/MasterChef.sol/MasterChef.json')
-    const chef = new ethers.Contract(chefAAddress, chefabi, accounts[0])
+    const chef = new ethers.Contract(chefAddress, chefabi, accounts[0])
 
     let pairAbi = getAbi('../kingkong-swap-periphery/artifacts/@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol/IUniswapV2Pair.json')
 
