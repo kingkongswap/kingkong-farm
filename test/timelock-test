@@ -1,0 +1,77 @@
+const { expect, assert } = require('chai')
+const { BigNumber } = require('ethers')
+const Web3 = require('web3')
+var web3 = new Web3('http://localhost:8545')
+
+describe('timelock-test', function () {
+	let accounts
+	let erc
+	let multisig
+	let timelock
+
+	before(async function () {
+		accounts = await ethers.getSigners()
+
+        const ERC = await ethers.getContractFactory('MockERC20')
+		erc = await ERC.deploy('KKT', m(100000), 18)
+		await erc.deployed()
+
+		const MultiSig = await ethers.getContractFactory('MultiSigWallet')
+		multisig = await MultiSig.deploy([accounts[0].address, accounts[1].address, accounts[2].address], b(2))
+		await multisig.deployed()
+        
+        // let owners = await multisig.getOwners()
+        // for (let owner of owners) {
+        //     console.log('owner', owner)
+        // }
+            
+        const Timelock = await ethers.getContractFactory('Timelock')
+        timelock = await Timelock.deploy(accounts[0].address, b(2))
+        await timelock.deployed()
+	})
+	
+
+	it('test-1', async function () {
+        await erc.transfer(timelock.address, m(100))
+
+        let func = 'transfer(address,uint256)'
+        let data = web3.eth.abi.encodeParameters(['address','uint256'], [accounts[1].address, m(100)])
+        let eta = b(parseInt(Date.now() / 1000) + 7)
+        await timelock.queueTransaction(erc.address, b(0), func, data, eta)
+
+        await delay(4)
+        await timelock.executeTransaction(erc.address, b(0), func, data, eta)
+
+        await print()
+	})
+
+
+    async function print() {
+        let bal0 = d(await erc.balanceOf(accounts[0].address))
+        let bal1 = d(await erc.balanceOf(accounts[1].address))
+        let bal2 = d(await erc.balanceOf(timelock.address))
+        console.log('balance', bal0, bal1, bal2)
+	}
+
+    async function delay(sec) {
+        return new Promise((resolve, reject) => {
+            setTimeout(resolve, sec * 1000);
+        })
+    }
+
+	function m(num) {
+		return BigNumber.from('1000000000000000000').mul(num)
+	}
+
+	function d(bn) {
+		return bn.div('1000000000').toNumber() / 1000000000
+	}
+
+	function b(num) {
+		return BigNumber.from(num)
+	}
+
+	function n(bn) {
+		return bn.toNumber()
+	}
+})

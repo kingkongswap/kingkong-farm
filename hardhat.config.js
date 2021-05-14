@@ -62,6 +62,16 @@ module.exports = {
 				process.env.ETH_PK_1,
 				process.env.ETH_PK_2
 			]
+		},
+		bsc_mainnet: {
+			url: 'https://bsc-dataseed2.binance.org/',
+			chainId: 56,
+			from: process.env.ETH_ADDRESS_0,
+			accounts: [
+				process.env.ETH_PK_0,
+				process.env.ETH_PK_1,
+				process.env.ETH_PK_2
+			]
 		}
 	},
 	// solidity: {

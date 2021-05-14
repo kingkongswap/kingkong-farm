@@ -46,8 +46,6 @@ contract MasterChef is Ownable {
     KingKongToken public kkt;
     // Dev address.
     address public devaddr;
-    // Dev address.
-    address public opeaddr;
     // KKT tokens created per block.
     uint256 public kktPerBlock;
     // Info of each pool.
@@ -69,13 +67,11 @@ contract MasterChef is Ownable {
     constructor(
         KingKongToken _kkt,
         address _devaddr,
-        address _opeaddr,
         uint256 _kktPerBlock,
         uint256 _startBlock
     ) public {
         kkt = _kkt;
         devaddr = _devaddr;
-        opeaddr = _opeaddr;
         kktPerBlock = _kktPerBlock;
         startBlock = _startBlock;
     }
@@ -179,8 +175,7 @@ contract MasterChef is Ownable {
             multiplier.mul(kktPerBlock).mul(pool.allocPoint).div(
                 totalAllocPoint
             );
-        kkt.mint(opeaddr, kktReward.div(5));
-        kkt.mint(devaddr, kktReward.div(10));
+        kkt.mint(devaddr, kktReward.div(15));
         kkt.mint(address(this), kktReward);
         pool.accKKTPerShare = pool.accKKTPerShare.add(
             kktReward.mul(1e12).div(lpSupply)
@@ -251,11 +246,5 @@ contract MasterChef is Ownable {
     function dev(address _devaddr) public {
         require(msg.sender == devaddr, "dev: wut?");
         devaddr = _devaddr;
-    }
-
-    // Update ope address by the previous dev.
-    function ope(address _opeaddr) public {
-        require(msg.sender == opeaddr, "ope: wut?");
-        opeaddr = _opeaddr;
     }
 }

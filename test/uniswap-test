@@ -1,0 +1,126 @@
+const { expect, assert } = require('chai')
+const { BigNumber } = require('ethers')
+
+describe('uniswap-test', function () {
+	let accounts
+	let factory
+	let weth
+	let usdt
+	let router
+	let lsf
+	let pairAddr = '0x0000000000000000000000000000000000000000'
+	let blackHole = '0x1000000000000000000000000000000000000bbb'
+	let deadline
+
+	before(async function () {
+		accounts = await ethers.getSigners()
+	})
+	
+	it('deploy', async function () {
+        const UniswapV2Factory = await ethers.getContractFactory('UniswapV2Factory')
+		factory = await UniswapV2Factory.deploy(accounts[0].address)
+		await factory.deployed()
+
+		console.log('INIT_CODE_PAIR_HASH', await factory.INIT_CODE_PAIR_HASH())
+
+		const WETH = await hre.ethers.getContractFactory('WETH9')
+		weth = await WETH.deploy()
+		await weth.deployed()
+		console.log('WETH deployed to:', weth.address)
+		
+		const USDT = await ethers.getContractFactory('MockERC20')
+		usdt = await USDT.deploy('USDT', m(4000), 18)
+		await usdt.deployed()
+		console.log('USDT deployed to:', usdt.address)
+		
+		const LSF = await ethers.getContractFactory('MockERC20')
+		lsf = await LSF.deploy('USDT', m(4000), 18)
+		await lsf.deployed()
+		console.log('LSF deployed to:', lsf.address)
+		
+		await usdt.transfer(accounts[1].address, m(1000))
+		await usdt.transfer(accounts[2].address, m(1000))
+
+		const Router = await hre.ethers.getContractFactory('UniswapV2Router02')
+		router = await Router.deploy(factory.address, weth.address)
+		await router.deployed()
+		console.log('Router deployed to:', router.address)
+		console.log('Swap done \n')
+
+		await print()
+	})
+
+	it('init', async function () {
+		let blockNumber = await hre.ethers.provider.getBlockNumber()
+		let block = await hre.ethers.provider.getBlock(blockNumber)
+		deadline = BigNumber.from(block.timestamp + 3600 * 24)
+
+		let allLSF = await lsf.balanceOf(accounts[0].address)
+
+		await usdt.approve(router.address, m(1000))
+		await lsf.approve(router.address, allLSF)
+
+		await router.addLiquidity(usdt.address, lsf.address, m(1000), allLSF, m(0), m(0), blackHole, deadline) //添加初始流动性并销毁lptoken
+
+		pairAddr = await router.pairFor(usdt.address, lsf.address)
+
+		await print()
+	})
+
+	it('buy coin', async function () {
+		await usdt.approve(router.address, m(1000))
+		await router.swapExactTokensForTokens(m(1000), m(0), [usdt.address, lsf.address], accounts[0].address, deadline)
+		console.log('swapExactTokensForTokens')
+
+		await print()
+	})
+
+	it('transfer 1', async function () {
+		await lsf.transfer(accounts[1].address, m(10))
+		console.log('transfer')
+
+		await print()
+	})
+
+	it('transfer 2', async function () {
+		await lsf.transfer(accounts[2].address, m(10))
+		console.log('transfer')
+
+		await print()
+	})
+
+	it('sell coin', async function () {
+		await lsf.approve(router.address, m(10))
+		await router.swapExactTokensForTokens(m(10), m(0), [lsf.address, usdt.address], accounts[0].address, deadline)
+		console.log('swapExactTokensForTokens')
+
+		await print()
+	})
+
+
+    async function print() {
+        console.log('')
+        console.log('account0 usdt:', d(await usdt.balanceOf(accounts[0].address)), 'lsf:', d(await lsf.balanceOf(accounts[0].address)))
+        console.log('account1 usdt:', d(await usdt.balanceOf(accounts[1].address)), 'lsf:', d(await lsf.balanceOf(accounts[1].address)))
+        console.log('account2 usdt:', d(await usdt.balanceOf(accounts[2].address)), 'lsf:', d(await lsf.balanceOf(accounts[2].address)))
+        console.log('blackHole usdt:', d(await usdt.balanceOf(blackHole)), 'lsf:', d(await lsf.balanceOf(blackHole)))
+        console.log('pairAddr usdt:', d(await usdt.balanceOf(pairAddr)), 'lsf:', d(await lsf.balanceOf(pairAddr)))
+        console.log('')
+	}
+
+	function m(num) {
+		return BigNumber.from('1000000000000000000').mul(num)
+	}
+
+	function d(bn) {
+		return bn.div('1000000000').toNumber() / 1000000000
+	}
+
+	function b(num) {
+		return BigNumber.from(num)
+	}
+
+	function n(bn) {
+		return bn.toNumber()
+	}
+})
